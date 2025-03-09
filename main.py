@@ -88,7 +88,7 @@ else:
     print("No se obtuvo token")
     token = ""
 
-url = "https://services.test.sw.com.mx/v4/cfdi33/stamp/v1"
+url = "https://services.test.sw.com.mx/v4/cfdi33/stamp/v4"
 
 payload = {}
 files = [("xml", ("file", open("cfdi.xml", "rb"), "application/octet-stream"))]
