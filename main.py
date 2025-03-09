@@ -86,7 +86,7 @@ if data:
 
 else:
     print("No se obtuvo token")
-    token = "p"
+    token = ""
 
 url = "https://services.test.sw.com.mx/v4/cfdi33/stamp/v1"
 
