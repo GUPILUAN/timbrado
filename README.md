@@ -5,3 +5,5 @@
 ```bash
 pip install -r requirements.txt
 ```
+
+* Constraseña para los usuarios personas fisicas y morales: 12345678a
