@@ -1,4 +1,5 @@
-from .Entity import Person
+from typing import Any
+from Entity import Person
 from lxml import etree
 import datetime
 
@@ -20,12 +21,31 @@ class CFDI:
         tipo_comprobante: str = "I",
         metodo_pago: str = "PUE",
         lugar_expedicion: str = "64000",
-    ):
+    ) -> None:
+        """Crea un cfdi sin receptor, ni emisor, es necesario añadirlos despues
+
+        Args:
+            version (str, optional): Version del cdfi. Defaults to "4.0".
+            serie (str, optional): serie del cdfi. Defaults to "A".
+            folio (str, optional): folio unico. Defaults to "12345".
+            fecha (str | None, optional): Fecha, de no ponerse, se hace automatico. Defaults to None.
+            exportacion (str, optional): Tipo de exportacion. Defaults to "02".
+            forma_pago (str, optional): Forma de pago. Defaults to "01".
+            condiciones_pago (str, optional): condiciones del pago. Defaults to "Contado".
+            subtotal (str, optional): subtotal. Defaults to "1000.00".
+            moneda (str, optional): moneda en el que se realizo el pago. Defaults to "MXN".
+            total (str, optional): subtotal mas impuestos. Defaults to "1160.00".
+            tipo_comprobante (str, optional): tipo de comprobante. Defaults to "I".
+            metodo_pago (str, optional): metodo de pago. Defaults to "PUE".
+            lugar_expedicion (str, optional): lugar de expedicion. Defaults to "64000".
+        """
 
         self.version: str = version
         self.serie: str = serie
         self.folio: str = folio
-        self.fecha: str = fecha if fecha else datetime.datetime.now().isoformat()[:-7]
+        self.fecha: str = (
+            fecha if fecha else datetime.datetime.now().isoformat()[:-7]
+        )  # Le quitamos los milisegundos
         self.exportacion: str = exportacion
         self.forma_pago: str = forma_pago
         self.condiciones_pago: str = condiciones_pago
@@ -43,26 +63,29 @@ class CFDI:
 
         self.string: str = ""
 
-    def set_emisor(self, rfc: str, nombre: str, regimen_fiscal: str) -> None:
-        self.emisor = Person(rfc=rfc, nombre=nombre, regimen_fiscal=regimen_fiscal)
+    def set_emisor(self, person_emisor: Person) -> None:
+        """Añade el emisor al cfdi
 
-    def set_receptor(
-        self,
-        rfc: str,
-        nombre: str,
-        uso_cfdi: str,
-        regimen_fiscal: str,
-        domicilio_fiscal: str,
-    ):
-        self.receptor = Person(
-            rfc=rfc,
-            nombre=nombre,
-            uso_cfdi=uso_cfdi,
-            regimen_fiscal=regimen_fiscal,
-            domicilio_fiscal=domicilio_fiscal,
-        )
+        Args:
+            person_emisor (Person): Persona emisora del cfdi
+        """
+
+        self.emisor = person_emisor
+
+    def set_receptor(self, person_receptor: Person) -> None:
+        """Añade el receptor al cfdi
+
+        Args:
+            person_receptor (Person): Persona receptora del cfdi
+        """
+        self.receptor = person_receptor
 
     def get_emisor(self) -> dict | None:
+        """Obtiene el emisor del cfdi
+
+        Returns:
+            dict | None: Datos del emisor en formato dict, si no hay: devuelve None
+        """
         if not self.emisor:
             return
         return {
@@ -72,6 +95,11 @@ class CFDI:
         }
 
     def get_receptor(self) -> dict | None:
+        """Obtiene el receptor del cfdi
+
+        Returns:
+            dict | None: Datos del receptor en formato dict, si no hay: devuelve None
+        """
         if not self.receptor:
             return
         return {
@@ -92,8 +120,20 @@ class CFDI:
         importe: str,
         objeto_imp: str,
         impuestos: list | None = None,
-    ):
-        concepto = {
+    ) -> None:
+        """Agrega un nuevo concepto al cfdi
+
+        Args:
+            clave_prod_serv (str): clave del producto o servicio
+            cantidad (str): cantidad del producto o servicio
+            clave_unidad (str): clave de la unidad
+            descripcion (str): descripcion del producto o servicio
+            valor_unitario (str): valor unitario del producto o servicio
+            importe (str): importe total
+            objeto_imp (str): objeto imp
+            impuestos (list | None, optional): impuestos. Defaults to None.
+        """
+        concepto: dict = {
             "ClaveProdServ": clave_prod_serv,
             "Cantidad": cantidad,
             "ClaveUnidad": clave_unidad,
@@ -105,7 +145,24 @@ class CFDI:
         }
         self.conceptos.append(concepto)
 
-    def agregar_impuesto(self, base, impuesto, tipo_factor, tasa_o_cuota, importe):
+    def agregar_impuesto(
+        self,
+        base: str,
+        impuesto: str,
+        tipo_factor: str,
+        tasa_o_cuota: str,
+        importe: str,
+    ) -> None:
+        """Agrega los impuestos
+
+        Args:
+            base (str): base
+            impuesto (str): impuesto
+            tipo_factor (str): tipo de impuesto
+            tasa_o_cuota (str): tasa o factura
+            importe (str): importe
+        """
+
         self.impuestos.append(
             {
                 "Base": base,
@@ -116,12 +173,22 @@ class CFDI:
             }
         )
 
-    def generar_xml(self):
-        ns = "http://www.sat.gob.mx/cfd/4"
-        xsi = "http://www.w3.org/2001/XMLSchema-instance"
-        schema_location = "http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd"
+    def generar_xml(self) -> str:
+        """Genera el xml y lo guarda en la raiz del programa
 
-        attributes = {
+        Raises:
+            ValueError: Si no aun no se han agregado el receptor o emisor, habrá error
+
+        Returns:
+            str: aparte de generar el archivo xml, la funcion regresa el mismo en formato string
+        """
+        ns: str = "http://www.sat.gob.mx/cfd/4"
+        xsi: str = "http://www.w3.org/2001/XMLSchema-instance"
+        schema_location: str = (
+            "http://www.sat.gob.mx/cfd/4 http://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd"
+        )
+
+        attributes: dict = {
             "{http://www.w3.org/2001/XMLSchema-instance}schemaLocation": schema_location,
             "Version": self.version,
             "Serie": self.serie,
@@ -138,24 +205,24 @@ class CFDI:
             "LugarExpedicion": self.lugar_expedicion,
         }
 
-        comprobante = etree.Element(
+        comprobante: Any = etree.Element(
             "{http://www.sat.gob.mx/cfd/4}Comprobante",
             nsmap={"cfdi": ns, "xsi": xsi},
             attrib=attributes,
         )
 
-        e = self.get_emisor()
-        r = self.get_receptor()
+        e: dict | None = self.get_emisor()
+        r: dict | None = self.get_receptor()
         if not e or not r:
             raise ValueError("No se encontraron datos de emisor o receptor")
-        emisor = etree.SubElement(
+        emisor: Any = etree.SubElement(
             comprobante, "{http://www.sat.gob.mx/cfd/4}Emisor", **e
         )
-        receptor = etree.SubElement(
+        receptor: Any = etree.SubElement(
             comprobante, "{http://www.sat.gob.mx/cfd/4}Receptor", **r
         )
 
-        conceptos = etree.SubElement(
+        conceptos: Any = etree.SubElement(
             comprobante,
             "{http://www.sat.gob.mx/cfd/4}Conceptos",
             nsmap=None,
@@ -171,7 +238,7 @@ class CFDI:
                 "ObjetoImp": c["ObjetoImp"],
                 "Importe": c["Importe"],
             }
-            concepto = etree.SubElement(
+            concepto: Any = etree.SubElement(
                 conceptos,
                 "{http://www.sat.gob.mx/cfd/4}Concepto",
                 attrib=concept_dict,
@@ -179,13 +246,13 @@ class CFDI:
             )
 
             if c["Impuestos"]:
-                impuestos = etree.SubElement(
+                impuestos: Any = etree.SubElement(
                     concepto,
                     "{http://www.sat.gob.mx/cfd/4}Impuestos",
                     attrib=None,
                     nsmap=None,
                 )
-                traslados = etree.SubElement(
+                traslados: Any = etree.SubElement(
                     impuestos,
                     "{http://www.sat.gob.mx/cfd/4}Traslados",
                     attrib=None,
@@ -196,7 +263,7 @@ class CFDI:
                         traslados, "{http://www.sat.gob.mx/cfd/4}Traslado", **imp
                     )
 
-        impuestos_globales = etree.SubElement(
+        impuestos_globales: Any = etree.SubElement(
             comprobante,
             "{http://www.sat.gob.mx/cfd/4}Impuestos",
             TotalImpuestosTrasladados=str(
@@ -205,7 +272,7 @@ class CFDI:
             attrib=None,
             nsmap=None,
         )
-        traslados_globales = etree.SubElement(
+        traslados_globales: Any = etree.SubElement(
             impuestos_globales,
             "{http://www.sat.gob.mx/cfd/4}Traslados",
             attrib=None,
@@ -216,21 +283,39 @@ class CFDI:
                 traslados_globales, "{http://www.sat.gob.mx/cfd/4}Traslado", **imp
             )
 
-        tree = etree.ElementTree(comprobante)
+        tree: Any = etree.ElementTree(comprobante)
         tree.write("cfdi.xml", encoding="UTF-8", xml_declaration=True)
         self.string: str = etree.tostring(comprobante).decode()
         return self.string
 
     def __str__(self) -> str:
+        """Retorna como representacion del cfdi en xml
+
+        Returns:
+            str: xml en formato string, devolvera vacio si aun no se ha generado
+        """
         return self.string
 
     def agregar_sello_y_cert(
-        self, sello_base64: str, numero_certificado, certificado_base64
+        self, sello_base64: str, numero_certificado: str, certificado_base64: str
     ) -> str | None:
+        """Agrega el sello y certificado
+
+        Args:
+            sello_base64 (str): sello en base 64
+            numero_certificado (str): numero del certificado
+            certificado_base64 (str): certidicado en base 64
+
+        Raises:
+            ValueError: En caso de que el formato del xml no coincida
+
+        Returns:
+            str | None: Si no existe el sello, regresará None
+        """
         if not sello_base64 or len(self.string) == 0:
             return
         # Parsear el XML
-        root = etree.fromstring(self.string, parser=None)
+        root: Any = etree.fromstring(self.string, parser=None)
 
         # Buscar la etiqueta <cfdi:Comprobante>
         # Si se encuentra la etiqueta, agregar el sello
@@ -240,7 +325,7 @@ class CFDI:
             root.set("Certificado", certificado_base64)
         else:
             raise ValueError("No se encontró la etiqueta <cfdi:Comprobante> en el XML.")
-        tree = etree.ElementTree(root)
+        tree: Any = etree.ElementTree(root)
         tree.write("cfdi.xml", encoding="UTF-8", xml_declaration=True)
         # Convertir el XML de vuelta a una cadena
         return etree.tostring(root).decode("utf-8")
