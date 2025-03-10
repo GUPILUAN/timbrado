@@ -1,5 +1,5 @@
 from typing import Any
-from Entity import Person
+from .Entity import Person
 from lxml import etree
 import datetime
 

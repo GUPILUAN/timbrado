@@ -16,7 +16,7 @@ from resources.Certificado import obtener_certificado_y_numero
 
 
 # Creamos el cfdi
-cfdi = CFDI()
+cfdi: CFDI = CFDI()
 
 # Proporcionamos los datos del emisor
 datos_emisor: dict = {
